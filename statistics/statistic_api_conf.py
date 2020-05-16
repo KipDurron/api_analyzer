@@ -39,14 +39,6 @@ class StatisticApiConf:
         self.common_world_stat = utils.get_words_dict(words)
         self.common_world_stat = collections.OrderedDict(sorted(self.common_world_stat.items()))
 
-    # def get_words_dict(self, words):
-    #     temp_dict = {}
-    #     for word in words:
-    #         if word in temp_dict:
-    #             temp_dict[word] = temp_dict[word] + 1
-    #         else:
-    #             temp_dict[word] = 1
-    #     return temp_dict
 
 
 
