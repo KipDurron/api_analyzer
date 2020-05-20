@@ -1,5 +1,10 @@
 import re
+
+import langdetect
+from langdetect.lang_detect_exception import ErrorCode
 from translate import Translator
+import string
+from langdetect import detect
 
 def get_words_dict(words):
     temp_dict = {}
@@ -30,3 +35,10 @@ def add_to_eng_dict(string, eng_dict):
             "synonyms": translate_to_rus(string) + []
         }
         eng_dict[string] = elem_eng_dict
+
+def isEnglish(str):
+    # try:
+    #     return detect(str) == "en"
+    # except langdetect.lang_detect_exception.LangDetectException:
+    #     return False
+    return bool(re.findall(r'[a-z]', str))

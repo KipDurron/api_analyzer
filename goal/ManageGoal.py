@@ -1,37 +1,46 @@
 import pymorphy2
 import nltk
-
 from goal.ActionGoal import ActionGoal
+from translate import Translator
+import re
+
+from utils.utils import isEnglish
 
 ACTION_NOT_FOUND = "action не определён"
 
-def get_goal_from_request(user_request = "создать instance с cpu = 10"):
-    request_arr = user_request.split(" ")
-    result_get_action = get_action(request_arr)
+def get_goal_from_request(user_request = "я хочу создать наверное instance с cpu = 10"):
+    morph = pymorphy2.MorphAnalyzer()
+    request_without_bad_char = re.sub(r'[^a-zа-я0-9 ]', '', user_request.lower())
+    request_arr = re.sub(r'\s+', ' ', request_without_bad_char).split(" ")
+    result_get_action = get_action(request_arr, morph)
     if result_get_action != ACTION_NOT_FOUND:
-        request_arr[result_get_action["action_index"]] = result_get_action["action_goal"]
-        object_goal = get_object(request_arr, result_get_action)
+        object_goal = get_object(request_arr, result_get_action, morph)
         goal = {"action_goal": result_get_action["action_goal"], "object_goal": object_goal}
         return goal
     else:
         return ACTION_NOT_FOUND
 
 
-def get_object(request_arr, result_get_action):
-    tokens = nltk.pos_tag(request_arr)
-    i = 0
+def get_object(request_arr, result_get_action, morph):
+    # tokens = nltk.pos_tag(request_arr)
     index_distance_arr = []
     i = 0
-    while i < len(tokens):
-        if tokens[i][1] == "NN" and i != result_get_action["action_index"]:
-            index_distance_arr.append(abs(i - result_get_action["action_index"]))
+    while i < len(request_arr):
+        # if isEnglish(request_arr[i]):
+        #     check_word = Translator(to_lang="rus").translate(request_arr[i])
+        # else:
+        #     check_word = request_arr[i]
+        check_word = request_arr[i]
+        if isEnglish(check_word):
+            check_word = Translator(to_lang="rus").translate(request_arr[i])
+            if morph.parse(check_word)[0].tag.POS == "NOUN" and i != result_get_action["action_index"]:
+                index_distance_arr.append({"index": i, "distance": abs(i - result_get_action["action_index"])})
         i += 1
-    min_index_distance = min(index_distance_arr)
-    object_goal = tokens[min_index_distance][0]
+    min_index_distance = min(index_distance_arr, key=lambda item: item["distance"])["index"]
+    object_goal = request_arr[min_index_distance]
     return object_goal
 
-def get_action(request_arr):
-    morph = pymorphy2.MorphAnalyzer()
+def get_action(request_arr, morph):
     for word in request_arr:
         p = morph.parse(word)[0]
         if p.tag.POS == "INFN" or p.tag.POS == "VERB":
