@@ -24,3 +24,9 @@ def add_to_rus_dict(string, rus_dict):
         }
         rus_dict[string] = elem_rus_dict
 
+def add_to_eng_dict(string, eng_dict):
+    if string not in eng_dict:
+        elem_eng_dict = {
+            "synonyms": translate_to_rus(string) + []
+        }
+        eng_dict[string] = elem_eng_dict

@@ -3,10 +3,10 @@ import re
 from utils import utils
 from utils.utils import replace_char, translate_to_rus
 from urllib import parse
-
+import json
 
 class ObjectGoal:
-    def __init__(self, path_json_content, complete_path_name, components):
+    def __init__(self, path_json_content, complete_path_name, external_api_json):
         self.external_path_json = complete_path_name
         self.actions = {}
         self.root_parent_object_name = ""
@@ -17,10 +17,42 @@ class ObjectGoal:
         for name_action, value in path_json_content.items():
             self.actions[name_action] = {
                 "action_content": value,
+                "used_params": self.set_used_params(external_api_json, value),
+                "type_list": self.actionIsList(value)
+
 
             }
             if self.root_parent_object_name == "":
                 self.root_parent_object_name = value["tags"][0]
+
+
+    def actionIsList(self, value_action):
+        low_summary = value_action["summary"].lower()
+        return bool(re.search(".*list.*", str(low_summary)))
+
+
+    def set_used_params(self, external_api_json, value_action):
+        result_list = []
+        components = external_api_json["components"]
+        parameters = value_action["parameters"]
+        for parameter_dict in parameters:
+            if "schema" in parameter_dict:
+                if "$ref" in parameter_dict["schema"]:
+                    ref = parameter_dict["schema"]["$ref"].replace("#/components/schemas/", "")
+                    from_params = components["schemas"][ref]
+                    from_params_str = json.dumps(from_params)
+                    result_list += re.findall(r'\w+_id', from_params_str)
+        if "requestBody" in value_action:
+            requestBody = value_action["requestBody"]
+            ref = requestBody['content']['application/json']['schema']["$ref"].replace("#/components/schemas/", "")
+            from_request_body_str = json.dumps(components["schemas"][ref])
+            result_list += re.findall(r'\w+_id', from_request_body_str)
+            # if "required" in components["schemas"][ref]:
+            #     from_request_body = components["schemas"][ref]['required']
+            #     for value in required:
+            #         if (bool(re.search(".*_id", value))):
+            #             result_dict[value] = value.replace("_id", "")
+        return list(set(result_list))
 
 
 
