@@ -31,9 +31,9 @@ def get_object(request_arr, result_get_action, morph):
         # else:
         #     check_word = request_arr[i]
         check_word = request_arr[i]
+        # если слово английское и находится оно существительное NN и сущ во множ числе NNS, то это нам подходит
         if isEnglish(check_word):
-            check_word = Translator(to_lang="rus").translate(request_arr[i])
-            if morph.parse(check_word)[0].tag.POS == "NOUN" and i != result_get_action["action_index"]:
+            if (nltk.pos_tag([check_word])[0][1] == "NN" or nltk.pos_tag([check_word])[0][1] == "NNS") and i != result_get_action["action_index"]:
                 index_distance_arr.append({"index": i, "distance": abs(i - result_get_action["action_index"])})
         i += 1
     min_index_distance = min(index_distance_arr, key=lambda item: item["distance"])["index"]
