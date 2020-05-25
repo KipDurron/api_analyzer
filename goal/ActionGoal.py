@@ -1,3 +1,3 @@
 class ActionGoal:
     def __init__(self):
-        self.actions = {"get": "получить", "post": "создать", "put": "обновить", "delete": "удалить"}
+        self.actions = {"to get": "получить", "to create": "создать", "to put": "обновить", "to delete": "удалить"}

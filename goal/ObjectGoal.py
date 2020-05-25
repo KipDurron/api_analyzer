@@ -1,7 +1,7 @@
 import urlparse3
 import re
 from utils import utils
-from utils.utils import replace_char, translate_to_rus
+from utils.utils import replace_char
 from urllib import parse
 import json
 
@@ -13,6 +13,8 @@ class ObjectGoal:
         self.object_name = self.set_object_name(complete_path_name)
         self.parent_object_name = self.set_parent_object_name(complete_path_name)
         self.params_path = self.set_params_path(complete_path_name)
+        self.request_body_str = ""
+        self.required_param_from_req_body = []
 
         for name_action, value in path_json_content.items():
             self.actions[name_action] = {
@@ -46,15 +48,26 @@ class ObjectGoal:
             requestBody = value_action["requestBody"]
             ref = requestBody['content']['application/json']['schema']["$ref"].replace("#/components/schemas/", "")
             from_request_body_str = json.dumps(components["schemas"][ref])
+            self.request_body_str = from_request_body_str
             result_list += re.findall(r'\w+_id', from_request_body_str)
-            # if "required" in components["schemas"][ref]:
-            #     from_request_body = components["schemas"][ref]['required']
-            #     for value in required:
-            #         if (bool(re.search(".*_id", value))):
-            #             result_dict[value] = value.replace("_id", "")
+            if "required" in components["schemas"][ref]:
+                required = components["schemas"][ref]['required']
+                for value in required:
+                    self.required_param_from_req_body.append(value)
         return list(set(result_list))
 
-
+    # def set_required_param_from_req_body(self, external_api_json, value_action):
+    #     if "requestBody" in value_action:
+    #         requestBody = value_action["requestBody"]
+    #         ref = requestBody['content']['application/json']['schema']["$ref"].replace("#/components/schemas/", "")
+    #         from_request_body_str = json.dumps(components["schemas"][ref])
+    #         self.request_body_str = from_request_body_str
+    #         result_list += re.findall(r'\w+_id', from_request_body_str)
+    #         if "required" in components["schemas"][ref]:
+    #             from_request_body = components["schemas"][ref]['required']
+    #             for value in required:
+    #                 if (bool(re.search(".*_id", value))):
+    #                     result_dict[value] = value.replace("_id", "")
 
 
     def set_params_path(self, complete_path_name):
