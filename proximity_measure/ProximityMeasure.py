@@ -3,8 +3,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from transliterate.conf import settings
 import re
+import json
 
-from utils.utils import normalize_with_wordnet, name_api_str_replace, translate_rus_to_eng
+from utils.utils import normalize_with_wordnet, name_api_str_replace, translate_rus_to_eng, get_name_method_by_action
 
 NOT_FOUND_API_CONST = "Поиск функция api по вашему запросу не дал результата"
 
@@ -43,11 +44,45 @@ class ProximityMeasure:
     #     out = self.find_api_by_tfidf(self.user_request)
     #     return out
 
-    def PM_goal_with_api_functions(self):
-        out = self.find_api_by_tfidf(self.goal["object_goal"]["value"])
-        return out
+    def print_result(self, item_res_api):
+        # print_item =  json.dumps(item_res_api)
+        print(json.dumps(item_res_api, indent=4, sort_keys=True, ensure_ascii=False))
 
-    def find_api_by_tfidf(self, text):
+
+
+    def PM_goal_with_api_functions(self, goal, param_for_req_body = [], pred_api_name = ""):
+        api_name = self.find_api_by_tfidf(goal["object_goal"]["value"], goal)
+        if api_name == NOT_FOUND_API_CONST or pred_api_name == api_name:
+            return {"api_name": NOT_FOUND_API_CONST,
+                    "goal": goal}
+        method = get_name_method_by_action(goal["action_goal"])
+        req_body = ""
+        used_api = []
+        if api_name in self.classifierObjects:
+            classifierObject = self.classifierObjects[api_name]
+            params_path = classifierObject.params_path
+            if method in classifierObject.actions:
+                action_content = classifierObject.actions[method]
+                used_params = action_content['used_params']
+                for used_param in used_params:
+                    tmp_goal = {"action_goal": "to get",
+                            'object_goal': {'value': used_param, 'is_list': True}}
+                    used_api.append(self.PM_goal_with_api_functions(tmp_goal, [], api_name))
+                for param_path in params_path:
+                    tmp_goal = {"action_goal": "to get",
+                            'object_goal': {'value': param_path, 'is_list': True}}
+                    used_api.append(self.PM_goal_with_api_functions(tmp_goal, [], api_name))
+
+        item_res_api = {
+            "api_name": api_name,
+            "goal": goal,
+            "method": method,
+            "req_body": req_body,
+            "used_api": used_api
+        }
+        return item_res_api
+
+    def find_api_by_tfidf(self, text, local_goal):
         tfidf_vec = TfidfVectorizer(tokenizer=normalize_with_wordnet)
 
         # построим матрицу предложение-терм для нашего корпуса предложений SENTENCES
@@ -79,39 +114,40 @@ class ProximityMeasure:
             path_name = result['path_name']
             if path_name in self.classifierObjects:
                 classifierObject = self.classifierObjects[path_name]
-                if self.goal["object_goal"]["value"] == classifierObject.object_name:
+                if local_goal["object_goal"]["value"] == classifierObject.object_name:
                     result["mark"] += 0.5
 
-                if self.goal["action_goal"] == "to get":
+                if local_goal["action_goal"] == "to get":
                     if "get" in classifierObject.actions:
                         get_content = classifierObject.actions["get"]
-                        if self.goal["object_goal"]["is_list"] and get_content["type_list"]:
+                        if local_goal["object_goal"]["is_list"] and get_content["type_list"]:
                             result["mark"] += 0.5
-                        elif self.goal["object_goal"]["value"] in classifierObject.params_path:
+                        elif local_goal["object_goal"]["value"] in classifierObject.params_path:
                             result["mark"] += 0.5
                         else:
                             result["mark"] += 0.3
 
-                elif self.goal["action_goal"] == "to create":
+                elif local_goal["action_goal"] == "to create":
                     if "post" in classifierObject.actions:
                         result["mark"] += 0.5
 
-                elif self.goal["action_goal"] == "to put":
+                elif local_goal["action_goal"] == "to put":
                     if "put" in classifierObject.actions:
-                        if self.goal["object_goal"]["value"] in classifierObject.params_path:
+                        if local_goal["object_goal"]["value"] in classifierObject.params_path:
                             result["mark"] += 0.5
                         else:
                             result["mark"] += 0.3
 
-                elif self.goal["action_goal"] == "to delete":
+                elif local_goal["action_goal"] == "to delete":
                     if "delete" in classifierObject.actions:
-                        if self.goal["object_goal"]["value"] in classifierObject.params_path:
+                        if local_goal["object_goal"]["value"] in classifierObject.params_path:
                             result["mark"] += 0.5
                         else:
                             result["mark"] += 0.3
 
         max_mark = max([x['mark'] for x in best_results])
-        res = [key for key in best_results if best_results[key]['mark'] == max_mark]
+        res = [dict["path_name"] for dict in best_results if dict['mark'] == max_mark][0]
+        return res
 
 
 

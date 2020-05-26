@@ -77,3 +77,13 @@ def normalize_with_wordnet(text):
     tokens = nltk.word_tokenize(text.lower().translate(remove_punct_dict))
     lemmer = nltk.stem.WordNetLemmatizer()
     return [lemmer.lemmatize(token) for token in tokens]
+
+def get_name_method_by_action(action):
+    if action == "to get":
+        return "get"
+    if action == "to create":
+        return "post"
+    if action == "to put":
+        return "put"
+    if action == "to delete":
+        return "delete"

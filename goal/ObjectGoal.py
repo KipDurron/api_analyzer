@@ -43,18 +43,22 @@ class ObjectGoal:
                     ref = parameter_dict["schema"]["$ref"].replace("#/components/schemas/", "")
                     from_params = components["schemas"][ref]
                     from_params_str = json.dumps(from_params)
-                    result_list += re.findall(r'\w+_id', from_params_str)
+                    result_list += re.findall(r'(\w+)_id', from_params_str)
         if "requestBody" in value_action:
             requestBody = value_action["requestBody"]
             ref = requestBody['content']['application/json']['schema']["$ref"].replace("#/components/schemas/", "")
             from_request_body_str = json.dumps(components["schemas"][ref])
             self.request_body_str = from_request_body_str
-            result_list += re.findall(r'\w+_id', from_request_body_str)
+            result_list += re.findall(r'(\w+)_id', from_request_body_str)
             if "required" in components["schemas"][ref]:
                 required = components["schemas"][ref]['required']
                 for value in required:
                     self.required_param_from_req_body.append(value)
         return list(set(result_list))
+        # result_used_params = list(set(result_list))
+        # if self.object_name in result_used_params:
+        #     result_used_params.remove(self.object_name)
+        # return result_used_params
 
     # def set_required_param_from_req_body(self, external_api_json, value_action):
     #     if "requestBody" in value_action:
