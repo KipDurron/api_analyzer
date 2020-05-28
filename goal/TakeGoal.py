@@ -58,4 +58,3 @@ def get_action(request_arr, morph):
                     return {"action_goal": action_goal, "action_index": action_index}
     return ACTION_NOT_FOUND
 
-get_goal_from_request()

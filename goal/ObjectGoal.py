@@ -13,14 +13,15 @@ class ObjectGoal:
         self.object_name = self.set_object_name(complete_path_name)
         self.parent_object_name = self.set_parent_object_name(complete_path_name)
         self.params_path = self.set_params_path(complete_path_name)
-        self.request_body_str = ""
-        self.required_param_from_req_body = []
+        # self.request_body_str = ""
+        # self.required_param_from_req_body = []
 
         for name_action, value in path_json_content.items():
             self.actions[name_action] = {
                 "action_content": value,
                 "used_params": self.set_used_params(external_api_json, value),
-                "type_list": self.actionIsList(value)
+                "type_list": self.actionIsList(value),
+                "request_body_str": self.set_request_body(external_api_json, value)
 
 
             }
@@ -32,6 +33,27 @@ class ObjectGoal:
         low_summary = value_action["summary"].lower()
         return bool(re.search(".*list.*", str(low_summary)))
 
+    def set_request_body(self, external_api_json, value_action):
+        # result_list = []
+        components = external_api_json["components"]
+        # parameters = value_action["parameters"]
+        # for parameter_dict in parameters:
+        #     if "schema" in parameter_dict:
+        #         if "$ref" in parameter_dict["schema"]:
+        #             ref = parameter_dict["schema"]["$ref"].replace("#/components/schemas/", "")
+        #             from_params = components["schemas"][ref]
+        #             from_params_str = json.dumps(from_params)
+        #             result_list += re.findall(r'(\w+)_id', from_params_str)
+        if "requestBody" in value_action:
+            requestBody = value_action["requestBody"]
+            ref = requestBody['content']['application/json']['schema']["$ref"].replace("#/components/schemas/", "")
+            from_request_body_str = json.dumps(components["schemas"][ref])
+            return from_request_body_str
+
+    # def get_all_req_body(self, request_body):
+    #     print('$ref': '#/components/schemas/BackupJobSchema_body')
+    #     # оставляем только конец пути(например /.../target -> target) и убираем остаток _query или _job
+    #     string_oper = re.sub(r'\'\$ref\': \'([\w_]+)\'', r'\1\2', string_oper)
 
     def set_used_params(self, external_api_json, value_action):
         result_list = []
@@ -46,14 +68,15 @@ class ObjectGoal:
                     result_list += re.findall(r'(\w+)_id', from_params_str)
         if "requestBody" in value_action:
             requestBody = value_action["requestBody"]
+            # complete_request_body = self.get_all_req_body(requestBody)
             ref = requestBody['content']['application/json']['schema']["$ref"].replace("#/components/schemas/", "")
             from_request_body_str = json.dumps(components["schemas"][ref])
-            self.request_body_str = from_request_body_str
+            # self.request_body_str = from_request_body_str
             result_list += re.findall(r'(\w+)_id', from_request_body_str)
-            if "required" in components["schemas"][ref]:
-                required = components["schemas"][ref]['required']
-                for value in required:
-                    self.required_param_from_req_body.append(value)
+            # if "required" in components["schemas"][ref]:
+            #     required = components["schemas"][ref]['required']
+            #     for value in required:
+            #         self.required_param_from_req_body.append(value)
         return list(set(result_list))
         # result_used_params = list(set(result_list))
         # if self.object_name in result_used_params:

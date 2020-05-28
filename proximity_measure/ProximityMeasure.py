@@ -11,7 +11,7 @@ NOT_FOUND_API_CONST = "Поиск функция api по вашему запр�
 
 class ProximityMeasure:
     def __init__(self, user_request, goal, stat_api_config, classifierObjects):
-        self.req_params_dict = self.get_req_params(user_request, goal)
+        self.req_params_dict = self.get_req_params(user_request)
         self.user_request = translate_rus_to_eng(user_request)
         # self.goal_sentence = goal["action_goal"] + " " + goal["object_goal"]["value"]
         self.goal = goal
@@ -21,8 +21,8 @@ class ProximityMeasure:
         self.arr_api_sentences = self.get_arr_api_sentences_from_api_names(self.arr_api_names)
         self.classifierObjects = classifierObjects.classifierObjects
 
-    def get_req_params(self, user_request, goal):
-        return dict(re.findall(r'(\S+\s+)=\s+"(.*?)"', user_request))
+    def get_req_params(self, user_request):
+        return dict(re.findall(r'(\S+)\s+=\s+"(.*?)"', user_request))
 
     def get_arr_api_sentences_from_api_names(self, arr_api_names):
         return_arr_sentences = []
@@ -49,14 +49,29 @@ class ProximityMeasure:
         print(json.dumps(item_res_api, indent=4, sort_keys=True, ensure_ascii=False))
 
 
+    def set_req_body(self, request_body_str, param_for_req_body):
+        if not bool(param_for_req_body):
+            return {}
+        request_body_json = json.loads(request_body_str)
+        return_request_body = {}
+        for param_name, param_value in param_for_req_body.items():
+            # request_body_str = re.sub("(\'" + param_name + "\': )\'[\w_]+\'", r'\1' + param_value, request_body_str)
+            if "properties" in request_body_json:
+                properties = request_body_json["properties"]
+                if param_name in properties:
+                    return_request_body[param_name] = param_value
 
-    def PM_goal_with_api_functions(self, goal, param_for_req_body = [], pred_api_name = ""):
+        return return_request_body
+
+
+
+    def PM_goal_with_api_functions(self, goal, param_for_req_body, pred_api_name = ""):
         api_name = self.find_api_by_tfidf(goal["object_goal"]["value"], goal)
         if api_name == NOT_FOUND_API_CONST or pred_api_name == api_name:
             return {"api_name": NOT_FOUND_API_CONST,
                     "goal": goal}
         method = get_name_method_by_action(goal["action_goal"])
-        req_body = ""
+        req_body = {}
         used_api = []
         if api_name in self.classifierObjects:
             classifierObject = self.classifierObjects[api_name]
@@ -64,14 +79,16 @@ class ProximityMeasure:
             if method in classifierObject.actions:
                 action_content = classifierObject.actions[method]
                 used_params = action_content['used_params']
+                request_body_str = action_content['request_body_str']
+                req_body = self.set_req_body(request_body_str, param_for_req_body)
                 for used_param in used_params:
                     tmp_goal = {"action_goal": "to get",
                             'object_goal': {'value': used_param, 'is_list': True}}
-                    used_api.append(self.PM_goal_with_api_functions(tmp_goal, [], api_name))
+                    used_api.append(self.PM_goal_with_api_functions(tmp_goal, {}, api_name))
                 for param_path in params_path:
                     tmp_goal = {"action_goal": "to get",
                             'object_goal': {'value': param_path, 'is_list': True}}
-                    used_api.append(self.PM_goal_with_api_functions(tmp_goal, [], api_name))
+                    used_api.append(self.PM_goal_with_api_functions(tmp_goal, {}, api_name))
 
         item_res_api = {
             "api_name": api_name,

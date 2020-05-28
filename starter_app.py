@@ -9,17 +9,14 @@ def start_app():
     api_analyzer_request = ApiAnalyzerRequest('http://sbcloud.ru/api/swagger')
     stat_api_config = StatisticApiConf(api_analyzer_request)
     classifierObjects = ClassifierObjects(api_analyzer_request.json_response)
-    user_request = "я хочу получить все наверное instance с cpu = \"10\""
+    user_request = "я хочу создать наверное instance с software = \"Microsoft\""
     goal = get_goal_from_request(user_request)
     if goal == ACTION_NOT_FOUND:
         print(ACTION_NOT_FOUND)
     else:
         pm = ProximityMeasure(user_request, goal, stat_api_config, classifierObjects)
-        result_program = pm.PM_goal_with_api_functions(pm.goal)
+        result_program = pm.PM_goal_with_api_functions(pm.goal, pm.get_req_params(user_request))
         pm.print_result(result_program)
-    # print(result_program)
-    # pm.PM_user_request_with_api_functions()
-    print(stat_api_config.word_stat)
 
 
 start_app()
